@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Title</title>
+        <link rel="stylesheet" href="layui/css/layui.css">
+    </head>
+    <body>
+        <table class="layui-table" id="app">
+            <thead>
+                <tr>
+                    <th>部门编号</th>
+                    <th>部门名称</th>
+                    <th>部门地址</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="dept in deptList">
+                    <td>{{dept.deptno}}</td>
+                    <td>{{dept.dname}}</td>
+                    <td>{{dept.loc}}</td>
+                </tr>
+            </tbody>
+        </table>
+        <div id="laypage"></div>
+
+
+        <script src="layui/layui.js"></script>
+        <script src="layui/jquery.js"></script>
+        <script src="js/vue.js"></script>
+        <script src="js/axios.min.js"></script>
+        <script type="text/javascript">
+            let vm = new Vue({
+                el: "#app",
+                data: { //函数对象：用来接收数据(数据承载模型)
+                    deptList: [],
+                    pageNum: 1, //设置首页页码
+                    pageSize: 10,  //设置一页显示的条数
+                    total: 0,    //总条数
+                    pages: 1 //一共多少页
+                },
+                methods: {
+                    getData: function () {
+                        axios.get('dept', {
+                            params: {
+                                op: 'getWithPage',
+                                pageNum: this.pageNum,
+                                pageSize: this.pageSize
+                            }
+                        }).then(res => {
+                            this.deptList = res.data.records;
+                            this.total = res.data.total;  //设置总条数
+                            this.pages = res.data.pages;
+                            console.info(res);
+                            if (this.pageNum == 1) {
+                                this.showPage();
+                            }
+                        }).catch(error => {
+                            console.log(error);
+                        });
+                    },
+                    showPage: function () {
+                        layui.use('laypage', function () {
+                            let laypage = layui.laypage;
+                            //执行一个laypage实例
+                            laypage.render({
+                                elem: 'laypage',  //注意laypage是 ID，不用加 # 号
+                                count: vm.total, //数据总数，从服务端得到
+                                limit: vm.pageSize,   //每页条数设置
+                                limits: [10, 20, 30],			//可选每页显示条数
+                                curr: 1,                      //起始页
+                                groups: 3,                     //连续页码个数
+                                prev: '上一页',               //上一页文本
+                                next: '下一页',                //下一页文本
+                                first: 1,                    //首页文本
+                                last: vm.pages,                   //尾页文本
+                                layout: ['prev', 'page', 'next', 'limit', 'refresh', 'skip'],
+                                jump: function (obj, first) {  //触发分页后的回调
+                                    //obj包含了当前分页的所有参数，第一次加载first为true
+                                    console.log(obj.curr); //得到当前页，以便向服务端请求对应页的数据。
+                                    console.log(obj.limit); //得到每页显示的条数
+                                    vm.pageNum = obj.curr;  //改变当前页码
+                                    vm.pageSize = obj.limit;
+                                    //首次不执行，一定要加此判断，否则初始时会无限刷新
+                                    if (!first) {
+                                        vm.getData();  //加载数据
+                                    }
+                                }
+                            });
+                        });
+                    }
+                },
+                created: function () {
+                    this.getData();
+                }
+            });
+        </script>
+    </body>
+</html>
